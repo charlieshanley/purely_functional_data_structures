@@ -3,18 +3,18 @@
 -------------------------------------------------------------------------------
 -- 3.1 - Leftist heaps
 
-class (Ord a) => Heap h a where
-    emptyHeap :: h a
-    isEmpty   :: h a ->  Bool
-    insert    :: a -> h a -> h a
-    merge     :: h a -> h a -> h a
-    findMin   :: h a -> a
-    deleteMin :: h a -> h a
+class Heap h where
+    emptyHeap :: (Ord a) => h a
+    isEmpty   :: (Ord a) => h a ->  Bool
+    insert    :: (Ord a) => a -> h a -> h a
+    merge     :: (Ord a) => h a -> h a -> h a
+    findMin   :: (Ord a) => h a -> a
+    deleteMin :: (Ord a) => h a -> h a
 
 
 data H a = E | N  Int a (H a) (H a) deriving (Read, Show)
 
-instance (Ord a) => Heap H a where
+instance Heap H where
     emptyHeap = E
 
     isEmpty E = True
@@ -66,18 +66,50 @@ foldAll f xs       = foldAll f $ foldPairs f xs
 -- 3.2 - Binomial heaps
 
 data Rose a = Rose Int a [Rose a] deriving (Eq, Show, Read)
-
 newtype BinomialHeap a = BH [Rose a]
 
-instance (Ord a) => Heap BinomialHeap a where
-    emptyHeap = undefined
-    isEmpty = undefined
+instance Heap BinomialHeap where
+    emptyHeap = BH []
+    isEmpty (BH ts) = null ts
 
-    insert x bh = 
+    insert x (BH ts) = BH (insTree (Rose 0 x []) ts)
     
-    merge = undefined
-    findMin = undefined
-    deleteMin = undefined
+    merge (BH ts1) (BH ts2) = BH (mrg ts1 ts2)
+
+    findMin (BH ts) = root t
+        where (t, _) = popMinTree ts
+
+    deleteMin (BH ts) = BH $ mrg (reverse ts1) ts2
+        where (Rose _ x ts1, ts2) = popMinTree ts
 
 rank' :: Rose a -> Int
 rank' (Rose i _ _) = i
+
+root :: Rose a -> a
+root (Rose _ x _ ) = x
+
+link :: (Ord a) => Rose a -> Rose a -> Rose a
+link t1@(Rose r x1 c1) t2@(Rose _ x2 c2)
+    | x1 <= x2  = Rose (r + 1) x1 (t2:c1)
+    | otherwise = Rose (r + 1) x2 (t1:c2)
+
+insTree :: (Ord a) => Rose a -> [Rose a] -> [Rose a]
+insTree t [] = [t]
+insTree t ts@(t':ts')
+    | rank' t < rank' t' = t:ts
+    | otherwise        = insTree (link t t') ts'
+
+mrg :: Ord a => [Rose a] -> [Rose a] -> [Rose a]
+mrg ts [] = ts
+mrg [] ts = ts
+mrg ts1@(t1:ts1') ts2@(t2:ts2')
+    | rank' t1 < rank' t2 = t1 : mrg ts1' ts2
+    | rank' t2 < rank' t1 = t2 : mrg ts2' ts1
+    | otherwise         = insTree (link t1 t2) (mrg ts1' ts2')
+
+popMinTree [] = error "empty heap"
+popMinTree [t] = (t, [])
+popMinTree (t:ts)
+    | root t < root t' = (t, ts)
+    | otherwise        = (t', t:ts')
+    where (t', ts') = popMinTree ts
