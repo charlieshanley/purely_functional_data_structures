@@ -15,7 +15,7 @@ class (Ord a) => Heap h a where
 data H a = E | N  Int a (H a) (H a) deriving (Read, Show)
 
 instance (Ord a) => Heap H a where
-    emptyHeap = undefined
+    emptyHeap = E
 
     isEmpty E = True
     isEmpty _ = False
@@ -47,11 +47,37 @@ trans (N _ x a b)
 
 fromList :: (Ord a) => [a] -> H a
 fromList []         = E
-fromList (x:y:rest) = mergeAll ((N 1 x E E) `merge` (N 1 y E E) : fromList rest)
-fromList (x:[])     = [N 1 x E E]
+fromList xs         = foldAll merge singletons
+    where singletons = flip map xs $ \x -> N 1 x E E
 
-mergePairs :: (a -> a -> a) -> [a] -> a
-mergePairs _ [] = error "no pairs"
-mergePairs _ (x:[]) = x
-mergePairs f (x:y:[]) = x `f` y
-mergePairs f (x:y:rest) = mergePairs f (x `f` y : [mergePairs f rest])
+foldPairs :: (a -> a -> a) -> [a] -> [a]
+foldPairs _ [] = error "no pairs"
+foldPairs _ (x:[]) = [x]
+foldPairs f (x:y:[]) = [f x y]
+foldPairs f (x:y:rest) = f x y : foldPairs f rest
+
+foldAll :: (a -> a -> a) -> [a] -> a
+foldAll _ []       = error "Sorry folks; 'taint a total funct. No empty lists."
+foldAll _ (x:[])   = x
+foldAll f (x:y:[]) = f x y
+foldAll f xs       = foldAll f $ foldPairs f xs
+
+-------------------------------------------------------------------------------
+-- 3.2 - Binomial heaps
+
+data Rose a = Rose Int a [Rose a] deriving (Eq, Show, Read)
+
+newtype BinomialHeap a = BH [Rose a]
+
+instance (Ord a) => Heap BinomialHeap a where
+    emptyHeap = undefined
+    isEmpty = undefined
+
+    insert x bh = 
+    
+    merge = undefined
+    findMin = undefined
+    deleteMin = undefined
+
+rank' :: Rose a -> Int
+rank' (Rose i _ _) = i
