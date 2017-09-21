@@ -43,8 +43,6 @@ trans (N _ x a b)
     | rank a >= rank b = N (rank b + 1) x a b
     | otherwise        = N (rank a + 1) x b a
 
-
-
 fromList :: (Ord a) => [a] -> H a
 fromList []         = E
 fromList xs         = foldAll merge singletons
