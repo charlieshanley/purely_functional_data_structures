@@ -51,6 +51,7 @@ checkQ q              = q
 -- to the amortized cost of holding it as data and accounting for each change?
 -- Will think about that.
 
+
 class Dequeue q where
     emptyD   :: q a
     isEmptyD :: q a -> Bool
@@ -63,19 +64,30 @@ class Dequeue q where
     lastD  :: q a -> a
     initD  :: q a -> q a
 
-instance Dequeue Q where
-    emptyD (Q [] []) = True
-    emptyD _         = False
 
-    consD (Q back front) x = Q back (x:front)
-    headD (Q _ (x:xs))     = x
-    tailD (Q back (x:xs))  = Q back xs
+data D a = D Int [a] Int [a] deriving (Eq, Read, Show)
 
-    snocD (Q back front) x = Q (x:back) front
-    lastD (Q (x:xs) front) = x
-    initD (Q (x:xs) front) = Q xs front
+len :: D a -> Int
+len (D lenBack _ lenFront _) = lenBack + lenFront
 
-checkD :: Q a -> Q a
-checkD (Q [] front) = 
-checkD (Q back [])  =
-checkD d            = d
+checkD :: D a -> D a
+checkD d | len d < 2 = d
+checkD (D 0 _ lf f) = D share (reverse . drop share $ f) (lf - share) (take share f)
+    where share = lf `div` 2
+checkD (D lb b 0 _) = D (lb - share) (take share b) share (reverse . drop share $ b)
+    where share = lb `div` 2
+checkD d = d
+
+
+instance Dequeue D where
+    emptyD = D 0 [] 0 []
+    isEmptyD (D 0 _ 0 _) = True
+    isEmptyD _           = False
+
+    consD (D lb bs lf fs) x   = checkD $ D lb bs (lf + 1) (x:fs)
+    headD (D _ _ _ (x:_))     = x
+    tailD (D lb bs lf (_:fs)) = checkD $ D lb bs (lf - 1) fs
+
+    snocD (D lb bs lf fs) x   = checkD $ D (lb + 1) (x:bs) lf fs
+    lastD (D _ (x:_) _ _)     = x
+    initD (D lb (_:bs) lf fs) = checkD $ D (lb - 1) bs lf fs
